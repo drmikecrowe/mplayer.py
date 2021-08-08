@@ -84,13 +84,13 @@ class Player(object):
 
     """
 
-    _base_args = ('-slave', '-idle', '-really-quiet', '-msglevel', 'global=4',
+    _base_args = ('-slave', '-idle', '-msglevel', 'global=4',
                   '-input', 'nodefault-bindings')
     cmd_prefix = misc.CmdPrefix.PAUSING_KEEP_FORCE
     exec_path = 'mplayer'
     version = None
 
-    def __init__(self, args=(), stdout=subprocess.PIPE, stderr=None, autospawn=True):
+    def __init__(self, args=(), stdout=subprocess.PIPE, stderr=None, autospawn=True, really_quiet=True):
         """Arguments:
 
         args -- additional MPlayer arguments (default: ())
@@ -106,6 +106,8 @@ class Player(object):
         self._proc = None
         # Terminate the MPlayer process when Python terminates
         atexit.register(_quit, weakref.proxy(self))
+        if really_quiet:
+            self._base_args.append('-really-quiet')
         if autospawn:
             self.spawn()
 
