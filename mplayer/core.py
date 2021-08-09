@@ -100,14 +100,14 @@ class Player(object):
 
         """
         super(Player, self).__init__()
+        if really_quiet:
+            self._base_args = tuple([*self._base_args, '-really-quiet'])
         self.args = args
         self._stdout = _StdoutWrapper(handle=stdout)
         self._stderr = _StderrWrapper(handle=stderr)
         self._proc = None
         # Terminate the MPlayer process when Python terminates
         atexit.register(_quit, weakref.proxy(self))
-        if really_quiet:
-            self._base_args.append('-really-quiet')
         if autospawn:
             self.spawn()
 
