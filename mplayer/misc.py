@@ -17,11 +17,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with mplayer.py.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
+
 try:
     import queue
 except ImportError:
     import Queue as queue
-
 
 __all__ = ['CmdPrefix']
 
@@ -36,7 +37,6 @@ class CmdPrefix(object):
 
 
 class _StderrWrapper(object):
-
     def __init__(self, **kwargs):
         super(_StderrWrapper, self).__init__()
         self._handle = kwargs['handle']
@@ -79,25 +79,40 @@ class _StderrWrapper(object):
 
 
 class _StdoutWrapper(_StderrWrapper):
-
     def __init__(self, **kwargs):
         super(_StdoutWrapper, self).__init__(**kwargs)
         self._answers = None
+        self._first_len = 0
 
     def _attach(self, source):
         super(_StdoutWrapper, self)._attach(source)
         self._answers = queue.Queue()
 
     def _process_output(self, *args):
-        line = self._source.readline().decode('utf-8', 'ignore')
-        if line:
-            line = line.rstrip()
-            if line.startswith('ANS_'):
-                self._answers.put_nowait(line)
-            elif line:
-                for subscriber in self._subscribers:
-                    subscriber(line)
-            return True
+        if self._source:
+            maybe = self._source.peek(256).decode('utf-8', 'ignore')
+            if len(maybe) == 0:
+                return
+            parts = re.split('\r|\r?\n', maybe)
+            if len(parts) == 1:
+                if len(maybe) > 5 and self._first_len == len(maybe):
+                    line = maybe
+                else:
+                    self._first_len = len(maybe)
+                    return
+            elif not self._source:
+                return  # seem to be dying after the peek
+            else:
+                line = self._source.read(len(parts[0]) + 1).decode(
+                    'utf-8', 'ignore')
+            if line:
+                line = line.rstrip()
+                if line.startswith('ANS_'):
+                    self._answers.put_nowait(line)
+                elif line:
+                    for subscriber in self._subscribers:
+                        subscriber(line)
+                return True
         else:
             # Automatically detach when MPlayer dies unexpectedly
             self._detach()
