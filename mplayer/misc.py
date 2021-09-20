@@ -92,16 +92,16 @@ class _StdoutWrapper(_StderrWrapper):
         if self._source:
             maybe = self._source.peek(256).decode('utf-8', 'ignore')
             if len(maybe) == 0:
-                return
+                return True
             parts = re.split('\r|\r?\n', maybe)
             if len(parts) == 1:
                 if len(maybe) > 5 and self._first_len == len(maybe):
                     line = maybe
                 else:
                     self._first_len = len(maybe)
-                    return
+                    return True
             elif not self._source:
-                return  # seem to be dying after the peek
+                return True  # seem to be dying after the peek
             else:
                 line = self._source.read(len(parts[0]) + 1).decode(
                     'utf-8', 'ignore')
