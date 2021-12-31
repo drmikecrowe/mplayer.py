@@ -31,7 +31,6 @@ except ImportError:
 
 from mplayer import mtypes, misc
 
-
 __all__ = ['Player', 'Step']
 
 
@@ -84,13 +83,18 @@ class Player(object):
 
     """
 
-    _base_args = ('-slave', '-idle', '-msglevel', 'global=4',
-                  '-input', 'nodefault-bindings')
+    _base_args = ('-novideo', '-ao', 'alsa', '-slave', '-idle', '-msglevel',
+                  'global=4', '-input', 'nodefault-bindings')
     cmd_prefix = misc.CmdPrefix.PAUSING_KEEP_FORCE
     exec_path = 'mplayer'
     version = None
 
-    def __init__(self, args=(), stdout=subprocess.PIPE, stderr=None, autospawn=True, really_quiet=True):
+    def __init__(self,
+                 args=(),
+                 stdout=subprocess.PIPE,
+                 stderr=None,
+                 autospawn=True,
+                 really_quiet=True):
         """Arguments:
 
         args -- additional MPlayer arguments (default: ())
@@ -180,14 +184,18 @@ class Player(object):
     @classmethod
     def _generate_properties(cls):
         # Properties that don't have pmin == pmax == None but are actually read-only
-        read_only = ['length', 'pause', 'stream_end', 'stream_length',
-            'stream_start', 'stream_time_pos']
+        read_only = [
+            'length', 'pause', 'stream_end', 'stream_length', 'stream_start',
+            'stream_time_pos'
+        ]
         rename = {'pause': 'paused'}
         proc = subprocess.Popen([cls.exec_path, '-list-properties'],
-                                bufsize=-1, stdout=subprocess.PIPE)
+                                bufsize=-1,
+                                stdout=subprocess.PIPE)
         # Try to get the version of this executable
         try:
-            cls.version = proc.stdout.readline().decode('utf-8', 'ignore').split()[1]
+            cls.version = proc.stdout.readline().decode('utf-8',
+                                                        'ignore').split()[1]
         except IndexError:
             pass
         for line in proc.stdout:
@@ -215,8 +223,11 @@ class Player(object):
                 # Min and max values don't make sense for FlagType
                 if ptype is mtypes.FlagType:
                     pmin = pmax = None
-                propset = partial(cls._propset, pname=pname, ptype=ptype,
-                                  pmin=pmin, pmax=pmax)
+                propset = partial(cls._propset,
+                                  pname=pname,
+                                  ptype=ptype,
+                                  pmin=pmin,
+                                  pmax=pmax)
             # Generate property doc
             propdoc = cls._gen_propdoc(ptype, pmin, pmax, propset)
             prop = property(propget, propset, doc=propdoc)
@@ -225,7 +236,8 @@ class Player(object):
                 pname = rename[pname]
             # There shouldn't be any naming conflict with hardcoded properties,
             # methods, class attributes, etc.
-            assert not hasattr(cls, pname), "name conflict for '{0}'".format(pname)
+            assert not hasattr(cls,
+                               pname), "name conflict for '{0}'".format(pname)
             setattr(cls, pname, prop)
 
     @staticmethod
@@ -235,7 +247,8 @@ class Player(object):
         args = list(args[:req]) + [x for x in args[req:] if x is not None]
         for i, arg in enumerate(args):
             if not isinstance(arg, types[i].type):
-                msg = 'expected {0} for argument {1}'.format(types[i].name, i + 1)
+                msg = 'expected {0} for argument {1}'.format(
+                    types[i].name, i + 1)
                 raise TypeError(msg)
             args[i] = types[i].adapt(arg)
         return tuple(args)
@@ -276,7 +289,8 @@ class Player(object):
         # Commands which have truncated names in -input cmdlist
         truncated = {'osd_show_property_te': 'osd_show_property_text'}
         proc = subprocess.Popen([cls.exec_path, '-input', 'cmdlist'],
-                                bufsize=-1, stdout=subprocess.PIPE)
+                                bufsize=-1,
+                                stdout=subprocess.PIPE)
         for line in proc.stdout:
             line = line.decode('utf-8', 'ignore')
             # skip version string at end of mplayer2 output
@@ -321,13 +335,14 @@ class Player(object):
         args = [self.exec_path]
         args.extend(self._args)
         # Start the MPlayer process (unbuffered)
-        self._proc = subprocess.Popen(args, stdin=subprocess.PIPE,
-            stdout=self._stdout._handle, stderr=self._stderr._handle,
-            close_fds=(sys.platform != 'win32'))
+        self._proc = subprocess.Popen(args,
+                                      stdin=subprocess.PIPE,
+                                      stdout=self._stdout._handle,
+                                      stderr=self._stderr._handle)
         if self._proc.stdout is not None:
-            self._stdout._attach(self._proc.stdout)
+            self._stdout._attach(self._proc.stdout, self._proc.poll)
         if self._proc.stderr is not None:
-            self._stderr._attach(self._proc.stderr)
+            self._stderr._attach(self._proc.stderr, self._proc.poll)
 
     def quit(self, retcode=0):
         """Terminate the underlying MPlayer process.
@@ -399,8 +414,8 @@ class Player(object):
 
 class _StderrWrapper(misc._StderrWrapper):
 
-    def _attach(self, source):
-        super(_StderrWrapper, self)._attach(source)
+    def _attach(self, source, poll):
+        super(_StderrWrapper, self)._attach(source, poll)
         t = Thread(target=self._thread_func)
         t.daemon = True
         t.start()
@@ -420,7 +435,6 @@ try:
 except OSError:
     pass
 
-
 if __name__ == '__main__':
     import sys
 
@@ -436,5 +450,5 @@ if __name__ == '__main__':
     # block execution
     try:
         raw_input()
-    except NameError: # raw_input() was renamed to input() in Python 3
+    except NameError:  # raw_input() was renamed to input() in Python 3
         input()
